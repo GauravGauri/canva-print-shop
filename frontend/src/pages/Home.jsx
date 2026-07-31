@@ -1,19 +1,15 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import TopNavbar from '../components/editor/TopNavbar';
 import './Home.css';
+import heroImage from '../assets/hero.png';
+import businessCardImg from '../../public/business_card.png';
+import bannerImg from '../../public/hero_banner.png';
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="store-wrapper">
-      <nav className="store-nav">
-        <div className="nav-brand">
-          <div className="logo-icon"></div>
-          <div>
-            <h3>Erry Imprints</h3>
-            <span>Design • Print • Deliver</span>
-          </div>
-        </div>
-        <ul className="nav-links">
           <li><Link to="/">Products</Link></li>
           <li><Link to="/templates">Templates</Link></li>
           <li><Link to="/editor/1">Editor</Link></li>
@@ -21,8 +17,8 @@ const Home = () => {
           <li><Link to="/tracking">Tracking</Link></li>
         </ul>
         <div className="nav-actions">
-          <button className="login-btn">Login</button>
-          <button className="start-btn">Start Design</button>
+          <button className="login-btn" onClick={() => navigate('/admin')}>Login</button>
+          <button className="start-btn" onClick={() => navigate('/editor/1')}>Start Design</button>
         </div>
       </nav>
 
@@ -33,8 +29,8 @@ const Home = () => {
           <p>A premium print shop website for business cards, flyers, posters, banners, signs, labels, stickers, T-shirts, menus, and custom branding — with an advanced editor, automatic artwork checks, instant pricing, and live order tracking.</p>
           
           <div className="hero-actions">
-            <button className="btn-primary-large">Start Designing <span>›</span></button>
-            <button className="btn-outline-large">Upload Artwork</button>
+            <button className="btn-primary-large" onClick={() => navigate('/editor/1')}>Start Designing <span>›</span></button>
+            <button className="btn-outline-large" onClick={() => navigate('/proofing')}>Upload Artwork</button>
           </div>
 
           <div className="hero-features">

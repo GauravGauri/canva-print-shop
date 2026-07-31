@@ -12,7 +12,7 @@ const tools = [
   { id: 'Grid', icon: Grid, label: 'Grid' },
 ];
 
-const EditorSidebar = ({ activeTool, setActiveTool }) => {
+const EditorSidebar = ({ activeTool, setActiveTool, onToolAction }) => {
   return (
     <div className="editor-sidebar-container">
       {/* Icon Toolbar */}
@@ -21,7 +21,10 @@ const EditorSidebar = ({ activeTool, setActiveTool }) => {
           <button 
             key={tool.id} 
             className={`tool-btn ${activeTool === tool.id ? 'active' : ''}`}
-            onClick={() => setActiveTool(tool.id)}
+            onClick={() => {
+              setActiveTool(tool.id);
+              if (onToolAction) onToolAction(tool.id);
+            }}
           >
             <tool.icon size={20} strokeWidth={1.5} />
             <span>{tool.label}</span>

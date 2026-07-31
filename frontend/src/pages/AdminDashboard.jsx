@@ -53,9 +53,29 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (!activeProduct || !activeProduct._id) return;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/products/${activeProduct._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(activeProduct)
+      });
+      if (response.ok) {
+        alert('Product changes saved successfully!');
+      } else {
+        alert('Failed to save changes.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving changes.');
+    }
+  };
+
   return (
     <div className="admin-page-wrapper">
-      <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab} onSave={handleSave}>
         <div className="admin-content-grid">
           <ProductListSidebar 
             products={products} 

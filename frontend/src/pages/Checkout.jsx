@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Checkout.css';
-import TopNavbar from '../components/editor/TopNavbar'; // Reusing for consistency, or standard nav
+import TopNavbar from '../components/editor/TopNavbar';
+import { AppContext } from '../context/AppContext';
 
 const Checkout = () => {
+  const navigate = useNavigate();
+  const { designData } = useContext(AppContext);
+  const [loading, setLoading] = useState(false);
   return (
     <div className="page-wrapper bg-gray">
       <TopNavbar />
@@ -112,7 +117,34 @@ const Checkout = () => {
                  <label>I approve my artwork for printing.</label>
                </div>
                
-               <button className="place-order-btn">🔒 Place Order</button>
+               <button className="place-order-btn" onClick={async () => {
+                 setLoading(true);
+                 try {
+                   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                   const response = await fetch(`${apiUrl}/api/orders`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                       product: designData?.productId || 'fallback-product-id',
+                       customerDetails: { name: 'Gurpreet Kaur', email: 'customer@email.com' },
+                       status: 'Received',
+                       totalAmount: 186.99
+                     })
+                   });
+                   if (response.ok) {
+                     navigate('/tracking');
+                   } else {
+                     alert('Failed to place order.');
+                   }
+                 } catch (err) {
+                   console.error(err);
+                   alert('Error placing order.');
+                 } finally {
+                   setLoading(false);
+                 }
+               }} disabled={loading}>
+                 {loading ? 'Processing...' : '🔒 Place Order'}
+               </button>
                <p className="secure-text">Secure checkout • Order tracking after payment</p>
              </div>
           </div>
