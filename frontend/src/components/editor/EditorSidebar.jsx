@@ -19,14 +19,25 @@ const EditorSidebar = ({ activeTool, setActiveTool, onToolAction, onImageUpload 
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file && onImageUpload) {
-      const reader = new FileReader();
-      reader.onload = (f) => {
-        onImageUpload(f.target.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        if (data.url) {
+          onImageUpload(data.url);
+        }
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload image.");
+      }
     }
     e.target.value = null;
   };
@@ -67,17 +78,26 @@ const EditorSidebar = ({ activeTool, setActiveTool, onToolAction, onImageUpload 
                <h3 className="font-bold text-lg text-primary-dark">Shapes & Lines</h3>
              </div>
              <div className="p-5 grid grid-cols-3 gap-4 overflow-y-auto">
-                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('rect')}>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('rect')} title="Rectangle">
                   <Square size={32} strokeWidth={1.5} />
                 </button>
-                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('circle')}>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('circle')} title="Circle">
                   <Circle size={32} strokeWidth={1.5} />
                 </button>
-                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('triangle')}>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('triangle')} title="Triangle">
                   <Triangle size={32} strokeWidth={1.5} />
                 </button>
-                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('line')}>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('line')} title="Line">
                   <Minus size={32} strokeWidth={1.5} />
+                </button>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('arrow')} title="Arrow">
+                  <span className="text-2xl">↗</span>
+                </button>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('polygon')} title="Hexagon">
+                  <span className="text-2xl">⬡</span>
+                </button>
+                <button className="aspect-square border border-border-gray rounded-lg hover:shadow-md transition-shadow flex items-center justify-center text-slate-700 bg-slate-50" onClick={() => onToolAction('star')} title="Star">
+                  <span className="text-2xl">★</span>
                 </button>
              </div>
           </div>

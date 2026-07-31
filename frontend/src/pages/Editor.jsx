@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as fabric from 'fabric';
 import EditorSidebar from '../components/editor/EditorSidebar';
@@ -6,19 +6,29 @@ import EditorRightPanel from '../components/editor/EditorRightPanel';
 import TopNavbar from '../components/editor/TopNavbar';
 import PropertiesBar from '../components/editor/PropertiesBar';
 import { AppContext } from '../context/AppContext';
-import { Check } from 'lucide-react';
+import { Check, ZoomIn, ZoomOut, Maximize, Undo2, Redo2 } from 'lucide-react';
 
 const Editor = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const canvasRef = useRef(null);
+  const wrapperRef = useRef(null);
   const [fabricCanvas, setFabricCanvas] = useState(null);
   const [activeTool, setActiveTool] = useState('Shapes');
   const [canvasObjects, setCanvasObjects] = useState([]);
   const [activeObject, setActiveObject] = useState(null);
   const [cropState, setCropState] = useState(null);
   const { setDesignData } = useContext(AppContext);
+  const [zoomRatio, setZoomRatio] = useState(1);
   
+  // History State
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isHistoryUpdate = useRef(false);
+  
+  // Clipboard State
+  const clipboardRef = useRef(null);
+
   const updateObjects = (canvas) => {
     if (canvas) {
       setCanvasObjects([...canvas.getObjects()]);
@@ -26,33 +36,98 @@ const Editor = () => {
     }
   };
 
+  const saveHistory = useCallback((canvas) => {
+    if (isHistoryUpdate.current || !canvas) return;
+    const json = canvas.toJSON();
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(JSON.stringify(json));
+      setHistoryIndex(newHistory.length - 1);
+      return newHistory;
+    });
+  }, [historyIndex]);
+
   useEffect(() => {
     if (canvasRef.current && !fabricCanvas) {
       const initCanvas = new fabric.Canvas(canvasRef.current, {
-        width: 600,
-        height: 400,
-        backgroundColor: '#ffffff'
+        width: 800,
+        height: 600,
+        backgroundColor: '#ffffff',
+        preserveObjectStacking: true
       });
 
       const rect = new fabric.Rect({
-        left: 100, top: 100, fill: '#fcd34d', width: 200, height: 150, rx: 10, ry: 10
+        left: 200, top: 200, fill: '#fcd34d', width: 200, height: 150, rx: 10, ry: 10
       });
       const text = new fabric.IText('Cafe Hero', {
-        left: 120, top: 150, fontSize: 24, fontFamily: 'Inter', fill: '#1e293b'
+        left: 220, top: 250, fontSize: 24, fontFamily: 'Inter', fill: '#1e293b'
       });
 
       initCanvas.add(rect, text);
       
-      initCanvas.on('object:added', () => updateObjects(initCanvas));
-      initCanvas.on('object:removed', () => updateObjects(initCanvas));
-      initCanvas.on('object:modified', () => updateObjects(initCanvas));
+      const handleModify = () => {
+        updateObjects(initCanvas);
+        saveHistory(initCanvas);
+      };
+
+      initCanvas.on('object:added', handleModify);
+      initCanvas.on('object:removed', handleModify);
+      initCanvas.on('object:modified', handleModify);
       initCanvas.on('selection:created', () => setActiveObject(initCanvas.getActiveObject()));
       initCanvas.on('selection:updated', () => setActiveObject(initCanvas.getActiveObject()));
       initCanvas.on('selection:cleared', () => setActiveObject(null));
 
+      // Zoom & Pan Logic
+      initCanvas.on('mouse:wheel', function(opt) {
+        let delta = opt.e.deltaY;
+        let zoom = initCanvas.getZoom();
+        zoom *= 0.999 ** delta;
+        if (zoom > 20) zoom = 20;
+        if (zoom < 0.1) zoom = 0.1;
+        initCanvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+        setZoomRatio(zoom);
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+      });
+
+      initCanvas.on('mouse:down', function(opt) {
+        let evt = opt.e;
+        if (evt.altKey === true || evt.button === 1) {
+          this.isDragging = true;
+          this.selection = false;
+          this.lastPosX = evt.clientX;
+          this.lastPosY = evt.clientY;
+        }
+      });
+
+      initCanvas.on('mouse:move', function(opt) {
+        if (this.isDragging) {
+          let e = opt.e;
+          let vpt = this.viewportTransform;
+          vpt[4] += e.clientX - this.lastPosX;
+          vpt[5] += e.clientY - this.lastPosY;
+          this.requestRenderAll();
+          this.lastPosX = e.clientX;
+          this.lastPosY = e.clientY;
+        }
+      });
+
+      initCanvas.on('mouse:up', function(opt) {
+        this.setViewportTransform(this.viewportTransform);
+        this.isDragging = false;
+        this.selection = true;
+      });
+
       initCanvas.renderAll();
       setFabricCanvas(initCanvas);
       updateObjects(initCanvas);
+      
+      // Initial History state
+      isHistoryUpdate.current = true;
+      const initialJson = JSON.stringify(initCanvas.toJSON());
+      setHistory([initialJson]);
+      setHistoryIndex(0);
+      setTimeout(() => { isHistoryUpdate.current = false; }, 100);
     }
     
     return () => {
@@ -60,7 +135,168 @@ const Editor = () => {
         fabricCanvas.dispose();
       }
     };
-  }, [canvasRef, fabricCanvas]);
+  }, [canvasRef, fabricCanvas, saveHistory]);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!fabricCanvas) return;
+      if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') return;
+
+      const active = fabricCanvas.getActiveObject();
+
+      // Delete
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (active && !active.isEditing) {
+          e.preventDefault();
+          const activeObjects = fabricCanvas.getActiveObjects();
+          if (activeObjects.length) {
+            fabricCanvas.discardActiveObject();
+            activeObjects.forEach(obj => fabricCanvas.remove(obj));
+          }
+        }
+      }
+      
+      // Copy (Ctrl+C)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (active && !active.isEditing) {
+          e.preventDefault();
+          active.clone().then(cloned => {
+            clipboardRef.current = cloned;
+          });
+        }
+      }
+
+      // Paste (Ctrl+V)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboardRef.current && !active?.isEditing) {
+          e.preventDefault();
+          clipboardRef.current.clone().then(clonedObj => {
+            fabricCanvas.discardActiveObject();
+            clonedObj.set({
+              left: clonedObj.left + 10,
+              top: clonedObj.top + 10,
+              evented: true,
+            });
+            if (clonedObj.type === 'activeSelection') {
+              clonedObj.canvas = fabricCanvas;
+              clonedObj.forEachObject(obj => {
+                fabricCanvas.add(obj);
+              });
+              clonedObj.setCoords();
+            } else {
+              fabricCanvas.add(clonedObj);
+            }
+            clipboardRef.current.top += 10;
+            clipboardRef.current.left += 10;
+            fabricCanvas.setActiveObject(clonedObj);
+            fabricCanvas.requestRenderAll();
+          });
+        }
+      }
+
+      // Duplicate (Ctrl+D)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        if (active && !active.isEditing) {
+          e.preventDefault();
+          active.clone().then(cloned => {
+            fabricCanvas.discardActiveObject();
+            cloned.set({ left: cloned.left + 10, top: cloned.top + 10 });
+            if (cloned.type === 'activeSelection') {
+              cloned.canvas = fabricCanvas;
+              cloned.forEachObject(obj => fabricCanvas.add(obj));
+              cloned.setCoords();
+            } else {
+              fabricCanvas.add(cloned);
+            }
+            fabricCanvas.setActiveObject(cloned);
+            fabricCanvas.requestRenderAll();
+          });
+        }
+      }
+
+      // Select All (Ctrl+A)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        if (!active?.isEditing) {
+          e.preventDefault();
+          fabricCanvas.discardActiveObject();
+          const sel = new fabric.ActiveSelection(fabricCanvas.getObjects(), { canvas: fabricCanvas });
+          fabricCanvas.setActiveObject(sel);
+          fabricCanvas.requestRenderAll();
+        }
+      }
+
+      // Undo (Ctrl+Z)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if (!active?.isEditing) {
+          e.preventDefault();
+          handleUndo();
+        }
+      }
+
+      // Redo (Ctrl+Shift+Z or Ctrl+Y)
+      if (((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) || ((e.ctrlKey || e.metaKey) && e.key === 'y')) {
+        if (!active?.isEditing) {
+          e.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
+  const handleUndo = () => {
+    if (historyIndex > 0 && fabricCanvas) {
+      isHistoryUpdate.current = true;
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      fabricCanvas.loadFromJSON(history[newIndex]).then(() => {
+        fabricCanvas.renderAll();
+        updateObjects(fabricCanvas);
+        setTimeout(() => { isHistoryUpdate.current = false; }, 100);
+      });
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1 && fabricCanvas) {
+      isHistoryUpdate.current = true;
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      fabricCanvas.loadFromJSON(history[newIndex]).then(() => {
+        fabricCanvas.renderAll();
+        updateObjects(fabricCanvas);
+        setTimeout(() => { isHistoryUpdate.current = false; }, 100);
+      });
+    }
+  };
+
+  const zoomTo = (level) => {
+    if (!fabricCanvas) return;
+    fabricCanvas.setZoom(level);
+    setZoomRatio(level);
+  };
+
+  const fitToScreen = () => {
+    if (!fabricCanvas || !wrapperRef.current) return;
+    const padding = 40;
+    const wrapperW = wrapperRef.current.clientWidth;
+    const wrapperH = wrapperRef.current.clientHeight;
+    
+    const scaleX = (wrapperW - padding) / 800; // 800 is canvas base width
+    const scaleY = (wrapperH - padding) / 600; // 600 is canvas base height
+    const scale = Math.min(scaleX, scaleY);
+    
+    fabricCanvas.setZoom(scale);
+    setZoomRatio(scale);
+    
+    const vpt = fabricCanvas.viewportTransform;
+    vpt[4] = (wrapperW - 800 * scale) / 2;
+    vpt[5] = (wrapperH - 600 * scale) / 2;
+    fabricCanvas.requestRenderAll();
+  };
 
   const handleToolAction = (toolId) => {
     if (!fabricCanvas) return;
@@ -68,15 +304,15 @@ const Editor = () => {
     const center = fabricCanvas.getCenter();
     
     if (toolId === 'heading') {
-      const text = new fabric.IText('Add a heading', { left: center.left - 100, top: center.top, fontSize: 48, fontFamily: 'Inter', fontWeight: 'bold', fill: '#1e293b' });
+      const text = new fabric.Textbox('Add a heading', { left: center.left - 150, top: center.top, fontSize: 48, fontFamily: 'Inter', fontWeight: 'bold', fill: '#1e293b', width: 300 });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
     } else if (toolId === 'subheading') {
-      const text = new fabric.IText('Add a subheading', { left: center.left - 100, top: center.top, fontSize: 24, fontFamily: 'Inter', fontWeight: '600', fill: '#334155' });
+      const text = new fabric.Textbox('Add a subheading', { left: center.left - 100, top: center.top, fontSize: 24, fontFamily: 'Inter', fontWeight: '600', fill: '#334155', width: 200 });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
     } else if (toolId === 'body') {
-      const text = new fabric.IText('Add a little bit of body text', { left: center.left - 100, top: center.top, fontSize: 16, fontFamily: 'Inter', fill: '#475569' });
+      const text = new fabric.Textbox('Add a little bit of body text', { left: center.left - 100, top: center.top, fontSize: 16, fontFamily: 'Inter', fill: '#475569', width: 200 });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
     } else if (toolId === 'rect') {
@@ -95,6 +331,21 @@ const Editor = () => {
       const line = new fabric.Line([center.left - 50, center.top, center.left + 50, center.top], { stroke: '#000000', strokeWidth: 4 });
       fabricCanvas.add(line);
       fabricCanvas.setActiveObject(line);
+    } else if (toolId === 'arrow') {
+      const arrowPath = 'M 0 10 L 50 10 L 50 0 L 70 15 L 50 30 L 50 20 L 0 20 z';
+      const arrow = new fabric.Path(arrowPath, { left: center.left - 35, top: center.top - 15, fill: '#8b5cf6' });
+      fabricCanvas.add(arrow);
+      fabricCanvas.setActiveObject(arrow);
+    } else if (toolId === 'polygon') {
+      const hexPoints = [{x: 50, y: 0}, {x: 100, y: 25}, {x: 100, y: 75}, {x: 50, y: 100}, {x: 0, y: 75}, {x: 0, y: 25}];
+      const hex = new fabric.Polygon(hexPoints, { left: center.left - 50, top: center.top - 50, fill: '#f59e0b' });
+      fabricCanvas.add(hex);
+      fabricCanvas.setActiveObject(hex);
+    } else if (toolId === 'star') {
+      const starPoints = [{x: 50, y: 0}, {x: 61, y: 35}, {x: 98, y: 35}, {x: 68, y: 57}, {x: 79, y: 91}, {x: 50, y: 70}, {x: 21, y: 91}, {x: 32, y: 57}, {x: 2, y: 35}, {x: 39, y: 35}];
+      const star = new fabric.Polygon(starPoints, { left: center.left - 50, top: center.top - 50, fill: '#fbbf24' });
+      fabricCanvas.add(star);
+      fabricCanvas.setActiveObject(star);
     }
     
     fabricCanvas.renderAll();
@@ -137,7 +388,6 @@ const Editor = () => {
     if (!fabricCanvas || !cropState) return;
     const { image, cropBox } = cropState;
     
-    // Calculate crop box relative to image (simplified logic)
     const scaleX = image.scaleX || 1;
     const scaleY = image.scaleY || 1;
     
@@ -214,11 +464,11 @@ const Editor = () => {
           onImageUpload={handleImageUpload} 
         />
         
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-100">
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-100 border-x border-border-gray">
           
           {/* Properties Bar Overlay */}
           {cropState ? (
-            <div className="h-14 bg-white border-b border-border-gray flex items-center px-4 justify-between shadow-sm z-10 gap-4">
+            <div className="h-14 bg-white border-b border-border-gray flex items-center px-4 justify-between shadow-sm z-10 gap-4 flex-shrink-0">
                <div className="flex items-center gap-2 text-sm font-bold text-red-500">
                  Crop Mode Active
                </div>
@@ -230,28 +480,46 @@ const Editor = () => {
                </div>
             </div>
           ) : (
-            <PropertiesBar 
-              activeObject={activeObject} 
-              fabricCanvas={fabricCanvas} 
-              onCrop={startCrop} 
-            />
+            <div className="flex items-center bg-white border-b border-border-gray flex-shrink-0 z-10 h-14 justify-between">
+              <PropertiesBar 
+                activeObject={activeObject} 
+                fabricCanvas={fabricCanvas} 
+                onCrop={startCrop} 
+              />
+              <div className="flex items-center gap-2 px-4 border-l border-border-gray h-full bg-primary-gray">
+                <button className="p-2 rounded hover:bg-white text-text-light hover:text-primary-dark transition-colors disabled:opacity-30 disabled:hover:bg-transparent" onClick={handleUndo} disabled={historyIndex <= 0} title="Undo (Ctrl+Z)">
+                  <Undo2 size={18} />
+                </button>
+                <button className="p-2 rounded hover:bg-white text-text-light hover:text-primary-dark transition-colors disabled:opacity-30 disabled:hover:bg-transparent" onClick={handleRedo} disabled={historyIndex >= history.length - 1} title="Redo (Ctrl+Shift+Z)">
+                  <Redo2 size={18} />
+                </button>
+              </div>
+            </div>
           )}
 
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-0 flex items-center justify-between w-full max-w-2xl bg-white/80 backdrop-blur rounded-full shadow-sm px-4 py-2 border border-border-gray">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-primary-dark">Workspace</span>
-              <span className="text-xs text-text-light font-medium bg-primary-gray px-2 py-1 rounded">600 x 400px</span>
-            </div>
-            <div className="flex items-center gap-4 text-sm font-medium">
-              <button className="text-text-light hover:text-primary-dark transition-colors">-</button>
-              <span>100%</span>
-              <button className="text-text-light hover:text-primary-dark transition-colors">+</button>
-            </div>
+          {/* Floating Zoom Controls */}
+          <div className="absolute bottom-6 right-6 z-10 flex items-center bg-white rounded-lg shadow-lg border border-border-gray overflow-hidden">
+            <button className="p-2 hover:bg-primary-gray text-text-main transition-colors border-r border-border-gray" onClick={() => zoomTo(Math.max(0.1, zoomRatio - 0.1))} title="Zoom Out">
+              <ZoomOut size={16} />
+            </button>
+            <span className="text-xs font-bold w-12 text-center text-primary-dark">{(zoomRatio * 100).toFixed(0)}%</span>
+            <button className="p-2 hover:bg-primary-gray text-text-main transition-colors border-l border-border-gray" onClick={() => zoomTo(Math.min(5, zoomRatio + 0.1))} title="Zoom In">
+              <ZoomIn size={16} />
+            </button>
+            <button className="p-2 hover:bg-primary-gray text-text-main transition-colors border-l border-border-gray bg-slate-50" onClick={fitToScreen} title="Fit to Screen">
+              <Maximize size={16} />
+            </button>
           </div>
           
-          <div className="flex-1 overflow-auto flex items-center justify-center p-8 z-0">
-             <div className="relative shadow-xl border border-border-gray bg-white rounded-sm mt-8">
-               <canvas ref={canvasRef} id="fabric-canvas" className="rounded-sm" />
+          <div className="flex-1 overflow-hidden relative p-8 z-0" ref={wrapperRef}>
+             <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center">
+                <span className="text-slate-300 font-bold text-4xl opacity-20 rotate-[-15deg]">WORKSPACE</span>
+             </div>
+             {/* The canvas container is absolutely positioned to allow panning */}
+             <div className="w-full h-full relative">
+               <div className="absolute shadow-2xl border border-border-gray bg-white rounded-sm" style={{ transformOrigin: 'top left' }}>
+                 <canvas ref={canvasRef} id="fabric-canvas" className="rounded-sm" />
+               </div>
              </div>
           </div>
         </div>
