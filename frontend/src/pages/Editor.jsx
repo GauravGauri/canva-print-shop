@@ -4,7 +4,9 @@ import * as fabric from 'fabric';
 import EditorSidebar from '../components/editor/EditorSidebar';
 import EditorRightPanel from '../components/editor/EditorRightPanel';
 import TopNavbar from '../components/editor/TopNavbar';
+import PropertiesBar from '../components/editor/PropertiesBar';
 import { AppContext } from '../context/AppContext';
+import { Check } from 'lucide-react';
 
 const Editor = () => {
   const { productId } = useParams();
@@ -13,16 +15,18 @@ const Editor = () => {
   const [fabricCanvas, setFabricCanvas] = useState(null);
   const [activeTool, setActiveTool] = useState('Shapes');
   const [canvasObjects, setCanvasObjects] = useState([]);
+  const [activeObject, setActiveObject] = useState(null);
+  const [cropState, setCropState] = useState(null);
   const { setDesignData } = useContext(AppContext);
   
   const updateObjects = (canvas) => {
     if (canvas) {
       setCanvasObjects([...canvas.getObjects()]);
+      setActiveObject(canvas.getActiveObject());
     }
   };
 
   useEffect(() => {
-    // Initialize Fabric.js Canvas
     if (canvasRef.current && !fabricCanvas) {
       const initCanvas = new fabric.Canvas(canvasRef.current, {
         width: 600,
@@ -30,20 +34,21 @@ const Editor = () => {
         backgroundColor: '#ffffff'
       });
 
-      // Add dummy elements
       const rect = new fabric.Rect({
         left: 100, top: 100, fill: '#fcd34d', width: 200, height: 150, rx: 10, ry: 10
       });
-      const text = new fabric.Text('Cafe Hero', {
+      const text = new fabric.IText('Cafe Hero', {
         left: 120, top: 150, fontSize: 24, fontFamily: 'Inter', fill: '#1e293b'
       });
 
       initCanvas.add(rect, text);
       
-      // Setup event listeners for layers panel sync
       initCanvas.on('object:added', () => updateObjects(initCanvas));
       initCanvas.on('object:removed', () => updateObjects(initCanvas));
       initCanvas.on('object:modified', () => updateObjects(initCanvas));
+      initCanvas.on('selection:created', () => setActiveObject(initCanvas.getActiveObject()));
+      initCanvas.on('selection:updated', () => setActiveObject(initCanvas.getActiveObject()));
+      initCanvas.on('selection:cleared', () => setActiveObject(null));
 
       initCanvas.renderAll();
       setFabricCanvas(initCanvas);
@@ -60,21 +65,39 @@ const Editor = () => {
   const handleToolAction = (toolId) => {
     if (!fabricCanvas) return;
     
-    if (toolId === 'Text') {
-      const text = new fabric.IText('Double Click to Edit', {
-        left: 150, top: 150, fontSize: 32, fontFamily: 'Inter', fill: '#1e293b'
-      });
+    const center = fabricCanvas.getCenter();
+    
+    if (toolId === 'heading') {
+      const text = new fabric.IText('Add a heading', { left: center.left - 100, top: center.top, fontSize: 48, fontFamily: 'Inter', fontWeight: 'bold', fill: '#1e293b' });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
-      fabricCanvas.renderAll();
-    } else if (toolId === 'Shapes') {
-      const rect = new fabric.Rect({
-        left: 150, top: 150, fill: '#3b82f6', width: 150, height: 150, rx: 10, ry: 10
-      });
+    } else if (toolId === 'subheading') {
+      const text = new fabric.IText('Add a subheading', { left: center.left - 100, top: center.top, fontSize: 24, fontFamily: 'Inter', fontWeight: '600', fill: '#334155' });
+      fabricCanvas.add(text);
+      fabricCanvas.setActiveObject(text);
+    } else if (toolId === 'body') {
+      const text = new fabric.IText('Add a little bit of body text', { left: center.left - 100, top: center.top, fontSize: 16, fontFamily: 'Inter', fill: '#475569' });
+      fabricCanvas.add(text);
+      fabricCanvas.setActiveObject(text);
+    } else if (toolId === 'rect') {
+      const rect = new fabric.Rect({ left: center.left - 50, top: center.top - 50, fill: '#3b82f6', width: 100, height: 100 });
       fabricCanvas.add(rect);
       fabricCanvas.setActiveObject(rect);
-      fabricCanvas.renderAll();
+    } else if (toolId === 'circle') {
+      const circle = new fabric.Circle({ left: center.left - 50, top: center.top - 50, fill: '#ef4444', radius: 50 });
+      fabricCanvas.add(circle);
+      fabricCanvas.setActiveObject(circle);
+    } else if (toolId === 'triangle') {
+      const tri = new fabric.Triangle({ left: center.left - 50, top: center.top - 50, fill: '#10b981', width: 100, height: 100 });
+      fabricCanvas.add(tri);
+      fabricCanvas.setActiveObject(tri);
+    } else if (toolId === 'line') {
+      const line = new fabric.Line([center.left - 50, center.top, center.left + 50, center.top], { stroke: '#000000', strokeWidth: 4 });
+      fabricCanvas.add(line);
+      fabricCanvas.setActiveObject(line);
     }
+    
+    fabricCanvas.renderAll();
   };
 
   const handleImageUpload = (dataUrl) => {
@@ -86,6 +109,65 @@ const Editor = () => {
       fabricCanvas.setActiveObject(img);
       fabricCanvas.renderAll();
     }).catch(err => console.error("Error loading image", err));
+  };
+
+  const startCrop = () => {
+    if (!fabricCanvas || !activeObject || activeObject.type !== 'image') return;
+    
+    const cropBox = new fabric.Rect({
+      left: activeObject.left,
+      top: activeObject.top,
+      width: activeObject.getScaledWidth(),
+      height: activeObject.getScaledHeight(),
+      fill: 'rgba(0,0,0,0.3)',
+      borderColor: 'red',
+      cornerColor: 'red',
+      transparentCorners: false,
+      hasRotatingPoint: false
+    });
+    
+    fabricCanvas.add(cropBox);
+    fabricCanvas.setActiveObject(cropBox);
+    fabricCanvas.renderAll();
+    
+    setCropState({ image: activeObject, cropBox });
+  };
+
+  const applyCrop = () => {
+    if (!fabricCanvas || !cropState) return;
+    const { image, cropBox } = cropState;
+    
+    // Calculate crop box relative to image (simplified logic)
+    const scaleX = image.scaleX || 1;
+    const scaleY = image.scaleY || 1;
+    
+    const leftOffset = (cropBox.left - image.left) / scaleX;
+    const topOffset = (cropBox.top - image.top) / scaleY;
+    
+    const cropWidth = (cropBox.getScaledWidth() / scaleX);
+    const cropHeight = (cropBox.getScaledHeight() / scaleY);
+
+    image.set({
+      cropX: (image.cropX || 0) + leftOffset,
+      cropY: (image.cropY || 0) + topOffset,
+      width: cropWidth,
+      height: cropHeight,
+      left: cropBox.left,
+      top: cropBox.top
+    });
+    
+    fabricCanvas.remove(cropBox);
+    fabricCanvas.setActiveObject(image);
+    fabricCanvas.renderAll();
+    setCropState(null);
+  };
+
+  const cancelCrop = () => {
+    if (!fabricCanvas || !cropState) return;
+    fabricCanvas.remove(cropState.cropBox);
+    fabricCanvas.setActiveObject(cropState.image);
+    fabricCanvas.renderAll();
+    setCropState(null);
   };
 
   const handleSave = async () => {
@@ -132,26 +214,44 @@ const Editor = () => {
           onImageUpload={handleImageUpload} 
         />
         
-        <div className="flex-1 flex flex-col relative overflow-hidden">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-between w-full max-w-2xl bg-white rounded-lg shadow px-4 py-2 border border-border-gray">
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-100">
+          
+          {/* Properties Bar Overlay */}
+          {cropState ? (
+            <div className="h-14 bg-white border-b border-border-gray flex items-center px-4 justify-between shadow-sm z-10 gap-4">
+               <div className="flex items-center gap-2 text-sm font-bold text-red-500">
+                 Crop Mode Active
+               </div>
+               <div className="flex items-center gap-2">
+                 <button className="text-text-light hover:text-text-main px-4 py-1.5 rounded text-sm font-medium transition-colors" onClick={cancelCrop}>Cancel</button>
+                 <button className="bg-primary-blue hover:bg-primary-blue-hover text-white flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-bold transition-colors" onClick={applyCrop}>
+                   <Check size={16} /> Apply Crop
+                 </button>
+               </div>
+            </div>
+          ) : (
+            <PropertiesBar 
+              activeObject={activeObject} 
+              fabricCanvas={fabricCanvas} 
+              onCrop={startCrop} 
+            />
+          )}
+
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-0 flex items-center justify-between w-full max-w-2xl bg-white/80 backdrop-blur rounded-full shadow-sm px-4 py-2 border border-border-gray">
             <div className="flex items-center gap-3">
-              <select defaultValue="Business Cards" className="bg-primary-gray border border-border-gray rounded px-2 py-1 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary-blue">
-                <option value="Business Cards">Business Cards</option>
-                <option value="Pull-Up Banner">Pull-Up Banner</option>
-              </select>
-              <span className="text-xs text-text-light font-medium">90 x 55mm</span>
+              <span className="text-sm font-bold text-primary-dark">Workspace</span>
+              <span className="text-xs text-text-light font-medium bg-primary-gray px-2 py-1 rounded">600 x 400px</span>
             </div>
             <div className="flex items-center gap-4 text-sm font-medium">
               <button className="text-text-light hover:text-primary-dark transition-colors">-</button>
-              <span>72%</span>
+              <span>100%</span>
               <button className="text-text-light hover:text-primary-dark transition-colors">+</button>
             </div>
           </div>
           
-          <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center p-8">
-             <div className="relative shadow-xl border border-border-gray bg-white rounded-sm">
+          <div className="flex-1 overflow-auto flex items-center justify-center p-8 z-0">
+             <div className="relative shadow-xl border border-border-gray bg-white rounded-sm mt-8">
                <canvas ref={canvasRef} id="fabric-canvas" className="rounded-sm" />
-               <div className="absolute inset-0 pointer-events-none border border-red-400/50 border-dashed m-4" title="Bleed Margin"></div>
              </div>
           </div>
         </div>
