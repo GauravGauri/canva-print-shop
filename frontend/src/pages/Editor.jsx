@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import * as fabric from 'fabric';
-import './Editor.css';
 import EditorSidebar from '../components/editor/EditorSidebar';
 import EditorRightPanel from '../components/editor/EditorRightPanel';
 import TopNavbar from '../components/editor/TopNavbar';
@@ -26,21 +25,11 @@ const Editor = () => {
 
       // Add a dummy shape for demonstration
       const rect = new fabric.Rect({
-        left: 100,
-        top: 100,
-        fill: '#fcd34d',
-        width: 200,
-        height: 150,
-        rx: 10,
-        ry: 10
+        left: 100, top: 100, fill: '#fcd34d', width: 200, height: 150, rx: 10, ry: 10
       });
       
       const text = new fabric.Text('Cafe Hero', {
-        left: 120,
-        top: 150,
-        fontSize: 24,
-        fontFamily: 'Inter',
-        fill: '#1e293b'
+        left: 120, top: 150, fontSize: 24, fontFamily: 'Inter', fill: '#1e293b'
       });
 
       initCanvas.add(rect, text);
@@ -109,31 +98,33 @@ const Editor = () => {
   };
 
   return (
-    <div className="editor-wrapper">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-primary-gray font-sans">
       <TopNavbar onSave={handleSave} onOrder={handleOrder} />
       
-      <div className="editor-main-layout">
+      <div className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
         <EditorSidebar activeTool={activeTool} setActiveTool={setActiveTool} onToolAction={handleToolAction} />
         
-        <div className="editor-workspace">
-          <div className="workspace-header">
-            <div className="product-selector">
-              <select defaultValue="Business Cards">
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-between w-full max-w-2xl bg-white rounded-lg shadow px-4 py-2 border border-border-gray">
+            <div className="flex items-center gap-3">
+              <select defaultValue="Business Cards" className="bg-primary-gray border border-border-gray rounded px-2 py-1 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary-blue">
                 <option value="Business Cards">Business Cards</option>
                 <option value="Pull-Up Banner">Pull-Up Banner</option>
               </select>
-              <span className="size-label">90 x 55mm</span>
+              <span className="text-xs text-text-light font-medium">90 x 55mm</span>
             </div>
-            <div className="zoom-controls">
-              <button>-</button>
+            <div className="flex items-center gap-4 text-sm font-medium">
+              <button className="text-text-light hover:text-primary-dark transition-colors">-</button>
               <span>72%</span>
-              <button>+</button>
+              <button className="text-text-light hover:text-primary-dark transition-colors">+</button>
             </div>
           </div>
           
-          <div className="canvas-container-outer">
-             <canvas ref={canvasRef} id="fabric-canvas" />
-             <div className="bleed-guides"></div>
+          <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center p-8">
+             <div className="relative shadow-xl border border-border-gray bg-white rounded-sm">
+               <canvas ref={canvasRef} id="fabric-canvas" className="rounded-sm" />
+               <div className="absolute inset-0 pointer-events-none border border-red-400/50 border-dashed m-4" title="Bleed Margin"></div>
+             </div>
           </div>
         </div>
         

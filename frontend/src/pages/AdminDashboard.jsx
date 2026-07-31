@@ -1,57 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/admin/AdminLayout';
 import ProductListSidebar from '../components/admin/ProductListSidebar';
 import ProductBasicForm from '../components/admin/ProductBasicForm';
-import ProductDimensionForm from '../components/admin/ProductDimensionForm';
-
-import ProductTemplatesForm from '../components/admin/ProductTemplatesForm';
-import ProductPricingForm from '../components/admin/ProductPricingForm';
-import ProductExportForm from '../components/admin/ProductExportForm';
-
-// Dummy data based on mockups
-const dummyProducts = [
-  { id: 1, name: 'Business Card', slug: 'business-card', category: 'Print Products', status: 'Active', sizeDesc: '90 x 55mm', metaDesc: '5mm bleed • 300dpi • CMYK', dimensions: { width: 90, height: 55, unit: 'mm', bleed: '5mm', safeMargin: '8mm', minimumDpi: '300dpi', colourMode: 'CMYK', acceptedFiles: 'PDF, AI, EPS, SVG, PNG, JPG', exportStandard: 'PDF/X-4' } },
-  { id: 2, name: 'Pull-Up Banner', slug: 'pull-up-banner', category: 'Wide Format', status: 'Active', sizeDesc: '850 x 2000mm', metaDesc: '5mm bleed • 510gsm scrimless', dimensions: { width: 850, height: 2000, unit: 'mm', bleed: '5mm', safeMargin: '8mm', minimumDpi: '300dpi', colourMode: 'CMYK', acceptedFiles: 'PDF, AI, EPS, SVG, PNG, JPG', exportStandard: 'PDF/X-4' } },
-  { id: 3, name: 'A3 Poster', slug: 'a3-poster', category: 'Print Products', status: 'Active', sizeDesc: '297 x 420mm', metaDesc: '5mm bleed • synthetic/paper' },
-  { id: 4, name: 'Sticker Label', slug: 'sticker-label', category: 'Labels', status: 'Active', sizeDesc: 'Custom Die Cut', metaDesc: '1200dpi • kiss cut • roll/sheet' },
-];
+import TopNavbar from '../components/editor/TopNavbar';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('Products');
-  const [activeProductId, setActiveProductId] = useState(2);
-  const [products, setProducts] = useState(dummyProducts);
+  const [products, setProducts] = useState([]);
+  const [activeProduct, setActiveProduct] = useState(null);
 
-  const activeProduct = products.find(p => p.id === activeProductId);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProducts(products.map(p => {
-      if (p.id === activeProductId) {
-        if (name === 'dimensions') {
-          return { ...p, dimensions: value };
-        }
-        return { ...p, [name]: value };
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/products`);
+        const data = await response.json();
+        setProducts(data);
+        if (data.length > 0) setActiveProduct(data[0]);
+      } catch (err) {
+        console.error(err);
       }
-      return p;
-    }));
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'Products':
-        return <ProductBasicForm product={activeProduct} handleChange={handleChange} />;
-      case 'Dimensions':
-        return <ProductDimensionForm product={activeProduct} handleChange={handleChange} />;
-      case 'Templates':
-        return <ProductTemplatesForm product={activeProduct} />;
-      case 'Pricing':
-        return <ProductPricingForm product={activeProduct} />;
-      case 'Export Rules':
-        return <ProductExportForm product={activeProduct} />;
-      default:
-        return null;
-    }
-  };
+    };
+    fetchProducts();
+  }, []);
 
   const handleSave = async () => {
     if (!activeProduct || !activeProduct._id) return;
@@ -74,16 +45,26 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="admin-page-wrapper">
+    <div className="flex flex-col min-h-screen">
+      <TopNavbar />
       <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab} onSave={handleSave}>
-        <div className="admin-content-grid">
-          <ProductListSidebar 
-            products={products} 
-            activeProductId={activeProductId} 
-            setActiveProductId={setActiveProductId} 
-          />
-          <div className="admin-form-area">
-            {renderContent()}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-1">
+            <ProductListSidebar 
+              products={products} 
+              activeProduct={activeProduct} 
+              setActiveProduct={setActiveProduct} 
+            />
+          </div>
+          <div className="lg:col-span-3">
+            {activeTab === 'Products' && <ProductBasicForm product={activeProduct} onChange={setActiveProduct} />}
+            {activeTab !== 'Products' && (
+              <div className="bg-white rounded-xl shadow-sm border border-border-gray p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[400px]">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-2xl text-slate-400 border-4 border-white shadow-sm mb-2">🚧</div>
+                <h3 className="text-xl font-bold text-primary-dark">Under Construction</h3>
+                <p className="text-text-light max-w-sm">The {activeTab} panel is still being built. Stay tuned for future updates.</p>
+              </div>
+            )}
           </div>
         </div>
       </AdminLayout>

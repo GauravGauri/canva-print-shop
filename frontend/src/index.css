@@ -1,40 +1,28 @@
-:root {
-  --primary-dark: #070f1a;
-  --bg-color: #f0f4f8;
-  --card-bg: #ffffff;
-  --text-main: #333333;
-  --text-muted: #777777;
-  --border-color: #e5e7eb;
-  --accent-color: #2b5cff;
-  --success-color: #10b981;
-  --font-family: 'Inter', system-ui, sans-serif;
-  
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 24px;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans m-0 bg-primary-gray text-text-main;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: var(--font-family);
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Custom Scrollbar for sidebar */
+/* Retain any custom scrollbar styling if necessary, converting to tailwind utilities where possible */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #ccc;
-  border-radius: 10px;
+  @apply bg-slate-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
 }

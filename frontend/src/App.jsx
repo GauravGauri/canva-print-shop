@@ -6,7 +6,6 @@ import Proofing from './pages/Proofing';
 import Checkout from './pages/Checkout';
 import Tracking from './pages/Tracking';
 import { AppProvider } from './context/AppContext';
-import './App.css';
 
 function App() {
   return (
