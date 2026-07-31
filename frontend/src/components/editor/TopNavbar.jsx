@@ -14,7 +14,7 @@ const TopNavbar = ({ onSave, onOrder }) => {
          <div className="w-8 h-8 rounded bg-gradient-to-tr from-primary-blue to-purple-500 shadow-inner flex items-center justify-center text-white font-bold text-sm">E</div>
          <div className="hidden sm:flex flex-col">
             <h4 className="font-bold text-sm leading-tight text-primary-dark tracking-tight">Erry Imprints Studio</h4>
-            <span className="text-[10px] text-text-light uppercase tracking-widest font-semibold">Advanced Online Design Editor</span>
+            <span className="text-[10px] text-primary-blue uppercase tracking-widest font-bold">Powered by Gaurav</span>
          </div>
       </div>
       
