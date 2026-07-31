@@ -10,151 +10,106 @@ const Home = () => {
   const navigate = useNavigate();
 
   return (
-          <li><Link to="/">Products</Link></li>
-          <li><Link to="/templates">Templates</Link></li>
-          <li><Link to="/editor/1">Editor</Link></li>
-          <li><Link to="/proofing">Proofing</Link></li>
-          <li><Link to="/tracking">Tracking</Link></li>
-        </ul>
-        <div className="nav-actions">
-          <button className="login-btn" onClick={() => navigate('/admin')}>Login</button>
-          <button className="start-btn" onClick={() => navigate('/editor/1')}>Start Design</button>
-        </div>
-      </nav>
-
-      <header className="store-hero">
+    <div className="home-wrapper">
+      <TopNavbar />
+      
+      {/* Hero Section */}
+      <section className="hero-section">
         <div className="hero-content">
-          <div className="location-badge">📍 Local South Australian print shop with online design tools</div>
-          <h1>Create, proof, and order prints like Canva.</h1>
-          <p>A premium print shop website for business cards, flyers, posters, banners, signs, labels, stickers, T-shirts, menus, and custom branding — with an advanced editor, automatic artwork checks, instant pricing, and live order tracking.</p>
+          <h1>Professional Print & Design Studio</h1>
+          <p>Design online with our advanced Canva-style editor, upload your own artwork, or choose from hundreds of premium templates. Fast turnaround, high-quality finishes.</p>
+          <div className="hero-buttons">
+            <button className="btn-primary" onClick={() => navigate('/editor/1')}>Start Designing</button>
+            <button className="btn-secondary" onClick={() => navigate('/proofing')}>Upload Artwork</button>
+          </div>
           
-          <div className="hero-actions">
-            <button className="btn-primary-large" onClick={() => navigate('/editor/1')}>Start Designing <span>›</span></button>
-            <button className="btn-outline-large" onClick={() => navigate('/proofing')}>Upload Artwork</button>
-          </div>
-
-          <div className="hero-features">
-            <div className="feature">
-              <h4>1200dpi</h4>
-              <span>Label quality</span>
-            </div>
-            <div className="feature">
-              <h4>48hr</h4>
-              <span>Fast options</span>
-            </div>
-            <div className="feature">
-              <h4>AU-wide</h4>
-              <span>Shipping</span>
-            </div>
+          <div className="features-row">
+            <span>✓ High-Quality Print</span>
+            <span>✓ Advanced Editor</span>
+            <span>✓ Express Delivery</span>
           </div>
         </div>
-        <div className="hero-graphic">
-           <img src="/hero_banner.png" alt="Cafe Grand Opening Banner" className="hero-image" />
-           <div className="hero-mock-ui">
-             <div className="mock-tools">
-               <span className="mock-tool-icon">T</span>
-               <span className="mock-tool-icon">🖼️</span>
-               <span className="mock-tool-icon">▲</span>
-             </div>
-             <div className="mock-checks">
-                <h5>Artwork Check</h5>
-                <ul>
-                  <li>✅ 5mm bleed</li>
-                  <li>✅ CMYK colours</li>
-                  <li>✅ 300dpi images</li>
-                  <li>✅ Safe margins</li>
-                </ul>
-                <button className="mock-order-btn">🛒 Order</button>
-             </div>
-           </div>
+        <div className="hero-image">
+          <img src={heroImage} alt="Design Editor Preview" />
         </div>
-      </header>
+      </section>
 
-      <section className="product-section">
+      {/* Product Categories */}
+      <section className="products-section">
         <div className="section-header">
-          <div>
-            <span className="section-subtitle">ONLINE PRINT PRODUCTS</span>
-            <h2>Choose a product and customise it.</h2>
-          </div>
-          <div className="search-bar">
-            <input type="text" placeholder="🔍 Search products..." />
-          </div>
+          <h2>Popular Print Products</h2>
+          <p>Choose a product to start designing or uploading your artwork.</p>
         </div>
-
-        <div className="product-grid">
+        
+        <div className="products-grid">
           {/* Product 1 */}
-          <div className="store-product-card">
-            <div className="card-image bg-gray">
-              <img src="/business_card.png" alt="Business Cards" />
+          <div className="product-card">
+            <div className="product-image">
+              <img src={businessCardImg} alt="Premium Business Cards" />
+              <div className="product-badge">Best Seller</div>
             </div>
-            <div className="card-body">
-              <div className="card-title-row">
-                <h4>Business Cards</h4>
-                <span className="badge popular">Popular</span>
-              </div>
-              <p>Premium stocks, matte/gloss/velvet lamination</p>
-              <div className="card-footer">
-                <span className="price">$109.99</span>
-                <Link to="/editor/1"><button className="design-now-btn">Design Now</button></Link>
+            <div className="product-details">
+              <h3>Premium Business Cards</h3>
+              <p>90x55mm • 350gsm • Matte/Gloss</p>
+              <div className="price-row">
+                <span>From $49.00</span>
+                <button className="btn-sm" onClick={() => navigate('/editor/1')}>Design</button>
               </div>
             </div>
           </div>
-
+          
           {/* Product 2 */}
-          <div className="store-product-card">
-            <div className="card-image bg-blue">
-              <div style={{width:'100%', height:'100%', backgroundColor: '#e2e8f0', display: 'flex', alignItems:'center', justifyContent:'center', color: '#64748b'}}>Banner Image</div>
+          <div className="product-card">
+            <div className="product-image">
+              <img src={bannerImg} alt="Pull-Up Banners" />
             </div>
-            <div className="card-body">
-              <div className="card-title-row">
-                <h4>Pull-Up Banners</h4>
-                <span className="badge offer">Offer</span>
-              </div>
-              <p>510gsm scrimless media, hardware & padded bag</p>
-              <div className="card-footer">
-                <span className="price">25% Off</span>
-                <Link to="/editor/2"><button className="design-now-btn">Design Now</button></Link>
+            <div className="product-details">
+              <h3>Pull-Up Banners</h3>
+              <p>850x2000mm • 510gsm blockout</p>
+              <div className="price-row">
+                <span>From $169.00</span>
+                <button className="btn-sm" onClick={() => navigate('/editor/2')}>Design</button>
               </div>
             </div>
           </div>
-
-          {/* Product 3 */}
-          <div className="store-product-card">
-            <div className="card-image bg-purple">
-               <div style={{width:'100%', height:'100%', backgroundColor: '#f1f5f9', display: 'flex', alignItems:'center', justifyContent:'center', color: '#64748b'}}>Poster Image</div>
+          
+          {/* Product 3 (Placeholder) */}
+          <div className="product-card">
+            <div className="product-image placeholder-img">
+              <span>A3 Posters</span>
             </div>
-            <div className="card-body">
-              <div className="card-title-row">
-                <h4>Posters</h4>
-                <span className="badge fast">Fast</span>
-              </div>
-              <p>A3 to A0, synthetic & paper options</p>
-              <div className="card-footer">
-                <span className="price">From A3</span>
-                <Link to="/editor/3"><button className="design-now-btn">Design Now</button></Link>
+            <div className="product-details">
+              <h3>A3 Posters</h3>
+              <p>297x420mm • 150gsm gloss</p>
+              <div className="price-row">
+                <span>From $35.00</span>
+                <button className="btn-sm" onClick={() => navigate('/editor/3')}>Design</button>
               </div>
             </div>
           </div>
-
-          {/* Product 4 */}
-          <div className="store-product-card">
-            <div className="card-image bg-yellow">
-               <div style={{width:'100%', height:'100%', backgroundColor: '#fef3c7', display: 'flex', alignItems:'center', justifyContent:'center', color: '#64748b'}}>Stickers Image</div>
+          
+          {/* Product 4 (Placeholder) */}
+          <div className="product-card">
+            <div className="product-image placeholder-img">
+              <span>Custom Labels</span>
             </div>
-            <div className="card-body">
-              <div className="card-title-row">
-                <h4>Labels & Stickers</h4>
-                <span className="badge default">1200dpi</span>
-              </div>
-              <p>Rolls, sheets, waterproof, barcode-ready</p>
-              <div className="card-footer">
-                <span className="price">Any Qty</span>
-                <Link to="/editor/4"><button className="design-now-btn">Design Now</button></Link>
+            <div className="product-details">
+              <h3>Custom Labels & Stickers</h3>
+              <p>Any shape • Vinyl • Kiss-cut</p>
+              <div className="price-row">
+                <span>From $75.00</span>
+                <button className="btn-sm" onClick={() => navigate('/editor/4')}>Design</button>
               </div>
             </div>
           </div>
-
         </div>
+      </section>
+      
+      {/* Call to Action */}
+      <section className="cta-section">
+        <h2>Have your own print-ready files?</h2>
+        <p>Use our smart proofing system to instantly check your files for bleed, color mode, and resolution issues before printing.</p>
+        <button className="btn-primary" onClick={() => navigate('/proofing')}>Go to Smart Proofing</button>
       </section>
     </div>
   );
