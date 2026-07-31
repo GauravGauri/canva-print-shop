@@ -12,8 +12,15 @@ const Editor = () => {
   const canvasRef = useRef(null);
   const [fabricCanvas, setFabricCanvas] = useState(null);
   const [activeTool, setActiveTool] = useState('Shapes');
+  const [canvasObjects, setCanvasObjects] = useState([]);
   const { setDesignData } = useContext(AppContext);
   
+  const updateObjects = (canvas) => {
+    if (canvas) {
+      setCanvasObjects([...canvas.getObjects()]);
+    }
+  };
+
   useEffect(() => {
     // Initialize Fabric.js Canvas
     if (canvasRef.current && !fabricCanvas) {
@@ -23,19 +30,24 @@ const Editor = () => {
         backgroundColor: '#ffffff'
       });
 
-      // Add a dummy shape for demonstration
+      // Add dummy elements
       const rect = new fabric.Rect({
         left: 100, top: 100, fill: '#fcd34d', width: 200, height: 150, rx: 10, ry: 10
       });
-      
       const text = new fabric.Text('Cafe Hero', {
         left: 120, top: 150, fontSize: 24, fontFamily: 'Inter', fill: '#1e293b'
       });
 
       initCanvas.add(rect, text);
-      initCanvas.renderAll();
       
+      // Setup event listeners for layers panel sync
+      initCanvas.on('object:added', () => updateObjects(initCanvas));
+      initCanvas.on('object:removed', () => updateObjects(initCanvas));
+      initCanvas.on('object:modified', () => updateObjects(initCanvas));
+
+      initCanvas.renderAll();
       setFabricCanvas(initCanvas);
+      updateObjects(initCanvas);
     }
     
     return () => {
@@ -49,7 +61,7 @@ const Editor = () => {
     if (!fabricCanvas) return;
     
     if (toolId === 'Text') {
-      const text = new fabric.Text('Double Click to Edit', {
+      const text = new fabric.IText('Double Click to Edit', {
         left: 150, top: 150, fontSize: 32, fontFamily: 'Inter', fill: '#1e293b'
       });
       fabricCanvas.add(text);
@@ -63,6 +75,17 @@ const Editor = () => {
       fabricCanvas.setActiveObject(rect);
       fabricCanvas.renderAll();
     }
+  };
+
+  const handleImageUpload = (dataUrl) => {
+    if (!fabricCanvas) return;
+    fabric.Image.fromURL(dataUrl).then((img) => {
+      img.set({ left: 100, top: 100 });
+      img.scaleToWidth(200);
+      fabricCanvas.add(img);
+      fabricCanvas.setActiveObject(img);
+      fabricCanvas.renderAll();
+    }).catch(err => console.error("Error loading image", err));
   };
 
   const handleSave = async () => {
@@ -102,7 +125,12 @@ const Editor = () => {
       <TopNavbar onSave={handleSave} onOrder={handleOrder} />
       
       <div className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
-        <EditorSidebar activeTool={activeTool} setActiveTool={setActiveTool} onToolAction={handleToolAction} />
+        <EditorSidebar 
+          activeTool={activeTool} 
+          setActiveTool={setActiveTool} 
+          onToolAction={handleToolAction} 
+          onImageUpload={handleImageUpload} 
+        />
         
         <div className="flex-1 flex flex-col relative overflow-hidden">
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-between w-full max-w-2xl bg-white rounded-lg shadow px-4 py-2 border border-border-gray">
@@ -128,7 +156,11 @@ const Editor = () => {
           </div>
         </div>
         
-        <EditorRightPanel />
+        <EditorRightPanel 
+          fabricCanvas={fabricCanvas} 
+          canvasObjects={canvasObjects} 
+          setCanvasObjects={setCanvasObjects} 
+        />
       </div>
     </div>
   );
