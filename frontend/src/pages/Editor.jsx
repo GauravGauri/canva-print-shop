@@ -301,54 +301,57 @@ const Editor = () => {
   const handleToolAction = (toolId) => {
     if (!fabricCanvas) return;
     
-    const center = fabricCanvas.getCenter();
+    // Canvas is hardcoded to 800x600, so center is 400x300
+    const cx = 400;
+    const cy = 300;
     
     if (toolId === 'heading') {
-      const text = new fabric.Textbox('Add a heading', { left: center.left - 150, top: center.top, fontSize: 48, fontFamily: 'Inter', fontWeight: 'bold', fill: '#1e293b', width: 300 });
+      const text = new fabric.Textbox('Add a heading', { left: cx, top: cy, originX: 'center', originY: 'center', fontSize: 48, fontFamily: 'Inter', fontWeight: 'bold', fill: '#1e293b', width: 400, textAlign: 'center' });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
     } else if (toolId === 'subheading') {
-      const text = new fabric.Textbox('Add a subheading', { left: center.left - 100, top: center.top, fontSize: 24, fontFamily: 'Inter', fontWeight: '600', fill: '#334155', width: 200 });
+      const text = new fabric.Textbox('Add a subheading', { left: cx, top: cy, originX: 'center', originY: 'center', fontSize: 24, fontFamily: 'Inter', fontWeight: '600', fill: '#334155', width: 300, textAlign: 'center' });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
     } else if (toolId === 'body') {
-      const text = new fabric.Textbox('Add a little bit of body text', { left: center.left - 100, top: center.top, fontSize: 16, fontFamily: 'Inter', fill: '#475569', width: 200 });
+      const text = new fabric.Textbox('Add a little bit of body text', { left: cx, top: cy, originX: 'center', originY: 'center', fontSize: 16, fontFamily: 'Inter', fill: '#475569', width: 250, textAlign: 'center' });
       fabricCanvas.add(text);
       fabricCanvas.setActiveObject(text);
     } else if (toolId === 'rect') {
-      const rect = new fabric.Rect({ left: center.left - 50, top: center.top - 50, fill: '#3b82f6', width: 100, height: 100 });
+      const rect = new fabric.Rect({ left: cx, top: cy, originX: 'center', originY: 'center', fill: '#3b82f6', width: 100, height: 100 });
       fabricCanvas.add(rect);
       fabricCanvas.setActiveObject(rect);
     } else if (toolId === 'circle') {
-      const circle = new fabric.Circle({ left: center.left - 50, top: center.top - 50, fill: '#ef4444', radius: 50 });
+      const circle = new fabric.Circle({ left: cx, top: cy, originX: 'center', originY: 'center', fill: '#ef4444', radius: 50 });
       fabricCanvas.add(circle);
       fabricCanvas.setActiveObject(circle);
     } else if (toolId === 'triangle') {
-      const tri = new fabric.Triangle({ left: center.left - 50, top: center.top - 50, fill: '#10b981', width: 100, height: 100 });
+      const tri = new fabric.Triangle({ left: cx, top: cy, originX: 'center', originY: 'center', fill: '#10b981', width: 100, height: 100 });
       fabricCanvas.add(tri);
       fabricCanvas.setActiveObject(tri);
     } else if (toolId === 'line') {
-      const line = new fabric.Line([center.left - 50, center.top, center.left + 50, center.top], { stroke: '#000000', strokeWidth: 4 });
+      const line = new fabric.Line([-50, 0, 50, 0], { left: cx, top: cy, originX: 'center', originY: 'center', stroke: '#000000', strokeWidth: 4 });
       fabricCanvas.add(line);
       fabricCanvas.setActiveObject(line);
     } else if (toolId === 'arrow') {
       const arrowPath = 'M 0 10 L 50 10 L 50 0 L 70 15 L 50 30 L 50 20 L 0 20 z';
-      const arrow = new fabric.Path(arrowPath, { left: center.left - 35, top: center.top - 15, fill: '#8b5cf6' });
+      const arrow = new fabric.Path(arrowPath, { left: cx, top: cy, originX: 'center', originY: 'center', fill: '#8b5cf6' });
       fabricCanvas.add(arrow);
       fabricCanvas.setActiveObject(arrow);
     } else if (toolId === 'polygon') {
       const hexPoints = [{x: 50, y: 0}, {x: 100, y: 25}, {x: 100, y: 75}, {x: 50, y: 100}, {x: 0, y: 75}, {x: 0, y: 25}];
-      const hex = new fabric.Polygon(hexPoints, { left: center.left - 50, top: center.top - 50, fill: '#f59e0b' });
+      const hex = new fabric.Polygon(hexPoints, { left: cx, top: cy, originX: 'center', originY: 'center', fill: '#f59e0b' });
       fabricCanvas.add(hex);
       fabricCanvas.setActiveObject(hex);
     } else if (toolId === 'star') {
       const starPoints = [{x: 50, y: 0}, {x: 61, y: 35}, {x: 98, y: 35}, {x: 68, y: 57}, {x: 79, y: 91}, {x: 50, y: 70}, {x: 21, y: 91}, {x: 32, y: 57}, {x: 2, y: 35}, {x: 39, y: 35}];
-      const star = new fabric.Polygon(starPoints, { left: center.left - 50, top: center.top - 50, fill: '#fbbf24' });
+      const star = new fabric.Polygon(starPoints, { left: cx, top: cy, originX: 'center', originY: 'center', fill: '#fbbf24' });
       fabricCanvas.add(star);
       fabricCanvas.setActiveObject(star);
     }
     
     fabricCanvas.renderAll();
+    fabricCanvas.fire('object:added');
   };
 
   const handleImageUpload = (dataUrl) => {
