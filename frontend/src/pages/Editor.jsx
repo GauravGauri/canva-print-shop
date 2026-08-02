@@ -348,6 +348,22 @@ const Editor = () => {
       const star = new fabric.Polygon(starPoints, { left: cx, top: cy, originX: 'center', originY: 'center', fill: '#fbbf24' });
       fabricCanvas.add(star);
       fabricCanvas.setActiveObject(star);
+    } else if (toolId === 'template_sale') {
+      fabricCanvas.clear();
+      fabricCanvas.backgroundColor = '#fca5a5';
+      const text = new fabric.Textbox('SUMMER SALE', { left: cx, top: cy - 50, originX: 'center', originY: 'center', fontSize: 64, fontFamily: 'Montserrat', fontWeight: 'bold', fill: '#ffffff', textAlign: 'center' });
+      const sub = new fabric.Textbox('Up to 50% Off', { left: cx, top: cy + 30, originX: 'center', originY: 'center', fontSize: 32, fontFamily: 'Open Sans', fill: '#ffffff', textAlign: 'center' });
+      fabricCanvas.add(text, sub);
+    } else if (toolId === 'template_ig') {
+      fabricCanvas.clear();
+      fabricCanvas.backgroundColor = '#fcd34d';
+      const text = new fabric.Textbox('New Post', { left: cx, top: cy, originX: 'center', originY: 'center', fontSize: 72, fontFamily: 'Playfair Display', fontWeight: 'bold', fill: '#1e293b', textAlign: 'center' });
+      fabricCanvas.add(text);
+    } else if (toolId === 'template_quote') {
+      fabricCanvas.clear();
+      fabricCanvas.backgroundColor = '#93c5fd';
+      const quote = new fabric.Textbox('"The best time to plant a tree was 20 years ago. The second best time is now."', { left: cx, top: cy, originX: 'center', originY: 'center', fontSize: 36, fontFamily: 'Lora', fontStyle: 'italic', fill: '#1e3a8a', width: 600, textAlign: 'center' });
+      fabricCanvas.add(quote);
     }
     
     fabricCanvas.renderAll();

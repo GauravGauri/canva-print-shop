@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Crop, AlignLeft, AlignCenter, AlignRight, Bold, Italic as ItalicIcon, Underline } from 'lucide-react';
+import { Trash2, Crop, AlignLeft, AlignCenter, AlignRight, Bold, Italic as ItalicIcon, Underline, Strikethrough, Type as TypeIcon } from 'lucide-react';
+import * as fabric from 'fabric';
+
+const fontsList = [
+  'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Oswald', 
+  'Source Sans 3', 'Raleway', 'PT Sans', 'Merriweather', 'Nunito', 
+  'Playfair Display', 'Lora', 'Rubik', 'Work Sans', 'Fira Sans', 
+  'Quicksand', 'Barlow', 'Inconsolata', 'Dancing Script', 'Pacifico'
+];
 
 const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
   const [props, setProps] = useState({
     fill: '#000000', stroke: '#000000', strokeWidth: 0, rx: 0, ry: 0,
     fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-    underline: false, textAlign: 'left', charSpacing: 0, lineHeight: 1.16, shadow: false, opacity: 1
+    underline: false, linethrough: false, overline: false, textBackgroundColor: '',
+    textAlign: 'left', charSpacing: 0, lineHeight: 1.16, opacity: 1,
+    shadowEnabled: false, shadowColor: 'rgba(0,0,0,0.3)', shadowBlur: 10, shadowOffsetX: 5, shadowOffsetY: 5,
+    brightness: 0, contrast: 0, saturation: 0, blur: 0, grayscale: false, invert: false, sepia: false
   });
 
   useEffect(() => {
@@ -21,11 +32,25 @@ const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
         fontWeight: activeObject.fontWeight || 'normal',
         fontStyle: activeObject.fontStyle || 'normal',
         underline: !!activeObject.underline,
+        linethrough: !!activeObject.linethrough,
+        overline: !!activeObject.overline,
+        textBackgroundColor: activeObject.textBackgroundColor || '',
         textAlign: activeObject.textAlign || 'left',
         charSpacing: activeObject.charSpacing || 0,
         lineHeight: activeObject.lineHeight || 1.16,
-        shadow: !!activeObject.shadow,
-        opacity: activeObject.opacity ?? 1
+        opacity: activeObject.opacity ?? 1,
+        shadowEnabled: !!activeObject.shadow,
+        shadowColor: activeObject.shadow ? activeObject.shadow.color : 'rgba(0,0,0,0.3)',
+        shadowBlur: activeObject.shadow ? activeObject.shadow.blur : 10,
+        shadowOffsetX: activeObject.shadow ? activeObject.shadow.offsetX : 5,
+        shadowOffsetY: activeObject.shadow ? activeObject.shadow.offsetY : 5,
+        brightness: activeObject.filters && activeObject.filters[0] ? activeObject.filters[0].brightness : 0,
+        contrast: activeObject.filters && activeObject.filters[1] ? activeObject.filters[1].contrast : 0,
+        saturation: activeObject.filters && activeObject.filters[2] ? activeObject.filters[2].saturation : 0,
+        blur: activeObject.filters && activeObject.filters[3] ? activeObject.filters[3].blur : 0,
+        grayscale: activeObject.filters && !!activeObject.filters[4],
+        invert: activeObject.filters && !!activeObject.filters[5],
+        sepia: activeObject.filters && !!activeObject.filters[6]
       });
     }
   }, [activeObject]);
@@ -33,21 +58,42 @@ const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
   const updateProperty = (key, value) => {
     if (!activeObject || !fabricCanvas) return;
     
-    if (key === 'shadow') {
-      if (value) {
-        activeObject.set('shadow', new fabric.Shadow({ color: 'rgba(0,0,0,0.3)', blur: 10, offsetX: 5, offsetY: 5 }));
+    if (key.startsWith('shadow')) {
+      const shadowProps = { ...props, [key]: value };
+      if (shadowProps.shadowEnabled) {
+        activeObject.set('shadow', new fabric.Shadow({
+          color: shadowProps.shadowColor,
+          blur: shadowProps.shadowBlur,
+          offsetX: shadowProps.shadowOffsetX,
+          offsetY: shadowProps.shadowOffsetY
+        }));
       } else {
         activeObject.set('shadow', null);
       }
     } else if (key === 'rx') {
       activeObject.set('rx', value);
-      activeObject.set('ry', value); // keep circular radius
+      activeObject.set('ry', value); 
     } else {
       activeObject.set(key, value);
     }
     
     setProps(prev => ({ ...prev, [key]: value }));
     fabricCanvas.renderAll();
+    fabricCanvas.fire('object:modified', { target: activeObject });
+  };
+
+  const updateFilter = (index, filterClass, options, key, value) => {
+    if (!activeObject || activeObject.type !== 'image') return;
+    
+    if (filterClass) {
+      activeObject.filters[index] = new filterClass(options);
+    } else {
+      activeObject.filters[index] = null;
+    }
+    
+    activeObject.applyFilters();
+    fabricCanvas.renderAll();
+    setProps(prev => ({ ...prev, [key]: value }));
     fabricCanvas.fire('object:modified', { target: activeObject });
   };
 
@@ -94,18 +140,17 @@ const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
         {isText && (
           <>
             <div className="w-px h-6 bg-border-gray"></div>
-            <select value={props.fontFamily} onChange={(e) => updateProperty('fontFamily', e.target.value)} className="bg-primary-gray border border-border-gray rounded px-2 py-1 text-sm">
-              <option value="Inter">Inter</option>
-              <option value="Roboto">Roboto</option>
-              <option value="Playfair Display">Playfair</option>
+            <select value={props.fontFamily} onChange={(e) => updateProperty('fontFamily', e.target.value)} className="bg-primary-gray border border-border-gray rounded px-2 py-1 text-sm w-32">
+              {fontsList.map(font => <option key={font} value={font} style={{fontFamily: font}}>{font}</option>)}
             </select>
             
-            <input type="number" value={props.fontSize} onChange={(e) => updateProperty('fontSize', parseInt(e.target.value, 10))} className="w-12 bg-primary-gray border border-border-gray rounded px-2 py-1 text-sm" />
+            <input type="number" value={props.fontSize} onChange={(e) => updateProperty('fontSize', parseInt(e.target.value, 10))} className="w-12 bg-primary-gray border border-border-gray rounded px-2 py-1 text-sm" title="Font Size" />
             
             <div className="flex bg-primary-gray border border-border-gray rounded">
-              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.fontWeight === 'bold' ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('fontWeight', props.fontWeight === 'bold' ? 'normal' : 'bold')}><Bold size={16} /></button>
-              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.fontStyle === 'italic' ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('fontStyle', props.fontStyle === 'italic' ? 'normal' : 'italic')}><ItalicIcon size={16} /></button>
-              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.underline ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('underline', !props.underline)}><Underline size={16} /></button>
+              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.fontWeight === 'bold' ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('fontWeight', props.fontWeight === 'bold' ? 'normal' : 'bold')} title="Bold"><Bold size={16} /></button>
+              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.fontStyle === 'italic' ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('fontStyle', props.fontStyle === 'italic' ? 'normal' : 'italic')} title="Italic"><ItalicIcon size={16} /></button>
+              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.underline ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('underline', !props.underline)} title="Underline"><Underline size={16} /></button>
+              <button className={`p-1.5 hover:bg-slate-200 transition-colors ${props.linethrough ? 'bg-slate-300' : ''}`} onClick={() => updateProperty('linethrough', !props.linethrough)} title="Strikethrough"><Strikethrough size={16} /></button>
             </div>
 
             <div className="flex bg-primary-gray border border-border-gray rounded">
@@ -115,15 +160,15 @@ const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text-light uppercase">Spacing</span>
+              <span className="text-xs font-bold text-text-light uppercase" title="Letter & Line Spacing">Spc</span>
               <input type="number" value={props.charSpacing} onChange={(e) => updateProperty('charSpacing', parseInt(e.target.value, 10))} className="w-12 bg-primary-gray border border-border-gray rounded px-1 py-1 text-sm" title="Letter Spacing" />
               <input type="number" step="0.1" value={props.lineHeight} onChange={(e) => updateProperty('lineHeight', parseFloat(e.target.value))} className="w-12 bg-primary-gray border border-border-gray rounded px-1 py-1 text-sm" title="Line Height" />
             </div>
-            
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
-              <input type="checkbox" checked={props.shadow} onChange={(e) => updateProperty('shadow', e.target.checked)} className="rounded text-primary-blue" />
-              Shadow
-            </label>
+
+            <div className="flex items-center gap-2">
+               <span className="text-xs font-bold text-text-light uppercase">BG</span>
+               <input type="color" value={props.textBackgroundColor || '#ffffff'} onChange={(e) => updateProperty('textBackgroundColor', e.target.value)} className="w-6 h-6 rounded cursor-pointer border-0 p-0" title="Text Background Color" />
+            </div>
           </>
         )}
 
@@ -145,28 +190,66 @@ const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
           </>
         )}
 
+        {/* Universal Shadow */}
+        <div className="w-px h-6 bg-border-gray"></div>
+        <div className="flex items-center gap-2 relative group">
+          <label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+            <input type="checkbox" checked={props.shadowEnabled} onChange={(e) => updateProperty('shadowEnabled', e.target.checked)} className="rounded text-primary-blue" />
+            Shadow
+          </label>
+          {props.shadowEnabled && (
+            <div className="hidden group-hover:flex absolute top-full left-0 mt-2 bg-white border border-border-gray p-2 shadow-lg rounded z-50 flex-col gap-2 w-48">
+              <div className="flex justify-between items-center text-xs">
+                Color: <input type="color" value={props.shadowColor} onChange={(e) => updateProperty('shadowColor', e.target.value)} className="w-5 h-5 p-0" />
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                Blur: <input type="range" min="0" max="50" value={props.shadowBlur} onChange={(e) => updateProperty('shadowBlur', parseInt(e.target.value))} className="w-24" />
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                OffX: <input type="range" min="-50" max="50" value={props.shadowOffsetX} onChange={(e) => updateProperty('shadowOffsetX', parseInt(e.target.value))} className="w-24" />
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                OffY: <input type="range" min="-50" max="50" value={props.shadowOffsetY} onChange={(e) => updateProperty('shadowOffsetY', parseInt(e.target.value))} className="w-24" />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Image Specific Properties */}
         {isImage && (
           <>
             <div className="w-px h-6 bg-border-gray"></div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text-light uppercase">Brightness</span>
-              <input type="range" min="-1" max="1" step="0.1" defaultValue="0" onChange={(e) => {
-                if (!activeObject || activeObject.type !== 'image') return;
-                activeObject.filters[0] = new fabric.Image.filters.Brightness({ brightness: parseFloat(e.target.value) });
-                activeObject.applyFilters();
-                fabricCanvas.renderAll();
-              }} className="w-16" />
+            <div className="flex items-center gap-3">
+               {/* Filters Dropdown */}
+               <div className="relative group">
+                 <button className="text-sm font-medium hover:bg-slate-100 px-2 py-1 rounded">Filters</button>
+                 <div className="hidden group-hover:flex absolute top-full left-0 mt-2 bg-white border border-border-gray p-3 shadow-xl rounded z-50 flex-col gap-3 w-56">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold text-text-light uppercase">Brightness</span>
+                      <input type="range" min="-1" max="1" step="0.1" value={props.brightness} onChange={(e) => updateFilter(0, fabric.Image.filters.Brightness, { brightness: parseFloat(e.target.value) }, 'brightness', parseFloat(e.target.value))} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold text-text-light uppercase">Contrast</span>
+                      <input type="range" min="-1" max="1" step="0.1" value={props.contrast} onChange={(e) => updateFilter(1, fabric.Image.filters.Contrast, { contrast: parseFloat(e.target.value) }, 'contrast', parseFloat(e.target.value))} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold text-text-light uppercase">Saturation</span>
+                      <input type="range" min="-1" max="1" step="0.1" value={props.saturation} onChange={(e) => updateFilter(2, fabric.Image.filters.Saturation, { saturation: parseFloat(e.target.value) }, 'saturation', parseFloat(e.target.value))} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold text-text-light uppercase">Blur</span>
+                      <input type="range" min="0" max="1" step="0.05" value={props.blur} onChange={(e) => updateFilter(3, fabric.Image.filters.Blur, { blur: parseFloat(e.target.value) }, 'blur', parseFloat(e.target.value))} />
+                    </div>
+                    <hr/>
+                    <div className="flex items-center justify-between">
+                       <label className="text-xs font-medium cursor-pointer"><input type="checkbox" checked={props.grayscale} onChange={(e) => updateFilter(4, e.target.checked ? fabric.Image.filters.Grayscale : null, {}, 'grayscale', e.target.checked)} className="mr-2" />Grayscale</label>
+                       <label className="text-xs font-medium cursor-pointer"><input type="checkbox" checked={props.invert} onChange={(e) => updateFilter(5, e.target.checked ? fabric.Image.filters.Invert : null, {}, 'invert', e.target.checked)} className="mr-2" />Invert</label>
+                       <label className="text-xs font-medium cursor-pointer"><input type="checkbox" checked={props.sepia} onChange={(e) => updateFilter(6, e.target.checked ? fabric.Image.filters.Sepia : null, {}, 'sepia', e.target.checked)} className="mr-2" />Sepia</label>
+                    </div>
+                 </div>
+               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text-light uppercase">Contrast</span>
-              <input type="range" min="-1" max="1" step="0.1" defaultValue="0" onChange={(e) => {
-                if (!activeObject || activeObject.type !== 'image') return;
-                activeObject.filters[1] = new fabric.Image.filters.Contrast({ contrast: parseFloat(e.target.value) });
-                activeObject.applyFilters();
-                fabricCanvas.renderAll();
-              }} className="w-16" />
-            </div>
+            
             <button className="flex items-center gap-1.5 bg-primary-gray hover:bg-slate-200 border border-border-gray px-3 py-1.5 rounded text-sm font-medium transition-colors" onClick={onCrop}>
               <Crop size={16} /> Crop
             </button>
@@ -174,7 +257,7 @@ const PropertiesBar = ({ activeObject, fabricCanvas, onCrop }) => {
         )}
       </div>
       
-      <div className="flex items-center pl-2">
+      <div className="flex items-center pl-2 ml-auto">
         <button className="flex items-center gap-1.5 text-text-light hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50" onClick={handleDelete}>
           <Trash2 size={16} /> <span className="text-sm font-medium">Delete</span>
         </button>

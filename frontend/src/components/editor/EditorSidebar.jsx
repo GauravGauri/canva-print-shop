@@ -1,12 +1,19 @@
 import React, { useRef } from 'react';
-import { MousePointer2, Type, Square, Image, FolderOpen, Grid, Upload, Circle, Triangle, Minus } from 'lucide-react';
+import { MousePointer2, Type, Square, Image, FolderOpen, Grid, Upload, Circle, Triangle, Minus, LayoutTemplate } from 'lucide-react';
 
 const tools = [
   { id: 'Select', icon: MousePointer2, label: 'Select' },
+  { id: 'Templates', icon: LayoutTemplate, label: 'Templates' },
   { id: 'Text', icon: Type, label: 'Text' },
   { id: 'Shapes', icon: Square, label: 'Elements' },
   { id: 'Photos', icon: Image, label: 'Uploads' },
   { id: 'Projects', icon: FolderOpen, label: 'Projects' },
+];
+
+const templatesList = [
+  { id: 'template_sale', name: 'Sale Banner', color: '#fca5a5' },
+  { id: 'template_ig', name: 'Instagram Post', color: '#fcd34d' },
+  { id: 'template_quote', name: 'Quote Card', color: '#93c5fd' },
 ];
 
 const EditorSidebar = ({ activeTool, setActiveTool, onToolAction, onImageUpload }) => {
@@ -23,20 +30,11 @@ const EditorSidebar = ({ activeTool, setActiveTool, onToolAction, onImageUpload 
     const file = e.target.files[0];
     if (file && onImageUpload) {
       try {
-        const formData = new FormData();
-        formData.append('image', file);
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/upload`, {
-          method: 'POST',
-          body: formData
-        });
-        const data = await response.json();
-        if (data.url) {
-          onImageUpload(data.url);
-        }
+        const objectUrl = URL.createObjectURL(file);
+        onImageUpload(objectUrl);
       } catch (err) {
         console.error("Upload failed", err);
-        alert("Failed to upload image.");
+        alert("Failed to load image.");
       }
     }
     e.target.value = null;
@@ -71,6 +69,29 @@ const EditorSidebar = ({ activeTool, setActiveTool, onToolAction, onImageUpload 
       {/* Secondary Panel */}
       <div className={`bg-white h-full border-r border-border-gray transition-all duration-300 ease-in-out overflow-hidden flex flex-col ${activeTool === 'Select' || activeTool === 'Projects' ? 'w-0 border-r-0' : 'w-72'}`}>
         
+        {/* Templates Panel */}
+        {activeTool === 'Templates' && (
+          <div className="flex flex-col h-full">
+             <div className="p-5 border-b border-border-gray">
+               <h3 className="font-bold text-lg text-primary-dark">Templates</h3>
+             </div>
+             <div className="p-5 flex flex-col gap-4 overflow-y-auto">
+               <p className="text-sm text-text-light">Start with a pre-designed layout. This will clear your current canvas.</p>
+               {templatesList.map(tpl => (
+                 <button 
+                   key={tpl.id} 
+                   className="w-full h-24 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
+                   style={{ backgroundColor: tpl.color }}
+                   onClick={() => onToolAction(tpl.id)}
+                 >
+                   <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                   <span style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>{tpl.name}</span>
+                 </button>
+               ))}
+             </div>
+          </div>
+        )}
+
         {/* Shapes Panel */}
         {activeTool === 'Shapes' && (
           <div className="flex flex-col h-full">
