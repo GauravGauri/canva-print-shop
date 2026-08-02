@@ -4,7 +4,6 @@ import * as fabric from 'fabric';
 import EditorSidebar from '../components/editor/EditorSidebar';
 import EditorRightPanel from '../components/editor/EditorRightPanel';
 import TopNavbar from '../components/editor/TopNavbar';
-import PropertiesBar from '../components/editor/PropertiesBar';
 import { AppContext } from '../context/AppContext';
 import { Check, ZoomIn, ZoomOut, Maximize, Undo2, Redo2 } from 'lucide-react';
 
@@ -486,7 +485,7 @@ const Editor = () => {
         <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-100 border-x border-border-gray">
           
           {/* Properties Bar Overlay */}
-          {cropState ? (
+          {cropState && (
             <div className="h-14 bg-white border-b border-border-gray flex items-center px-4 justify-between shadow-sm z-10 gap-4 flex-shrink-0">
                <div className="flex items-center gap-2 text-sm font-bold text-red-500">
                  Crop Mode Active
@@ -498,23 +497,16 @@ const Editor = () => {
                  </button>
                </div>
             </div>
-          ) : (
-            <div className="flex items-center bg-white border-b border-border-gray flex-shrink-0 z-10 h-14 justify-between">
-              <PropertiesBar 
-                activeObject={activeObject} 
-                fabricCanvas={fabricCanvas} 
-                onCrop={startCrop} 
-              />
-              <div className="flex items-center gap-2 px-4 border-l border-border-gray h-full bg-primary-gray">
-                <button className="p-2 rounded hover:bg-white text-text-light hover:text-primary-dark transition-colors disabled:opacity-30 disabled:hover:bg-transparent" onClick={handleUndo} disabled={historyIndex <= 0} title="Undo (Ctrl+Z)">
-                  <Undo2 size={18} />
-                </button>
-                <button className="p-2 rounded hover:bg-white text-text-light hover:text-primary-dark transition-colors disabled:opacity-30 disabled:hover:bg-transparent" onClick={handleRedo} disabled={historyIndex >= history.length - 1} title="Redo (Ctrl+Shift+Z)">
-                  <Redo2 size={18} />
-                </button>
-              </div>
-            </div>
           )}
+          {/* Floating Undo/Redo Controls */}
+          <div className="absolute top-6 left-6 z-10 flex items-center bg-white rounded-lg shadow-lg border border-border-gray overflow-hidden">
+             <button className="p-2 hover:bg-primary-gray text-text-main transition-colors border-r border-border-gray disabled:opacity-30 disabled:hover:bg-transparent" onClick={handleUndo} disabled={historyIndex <= 0} title="Undo (Ctrl+Z)">
+               <Undo2 size={16} />
+             </button>
+             <button className="p-2 hover:bg-primary-gray text-text-main transition-colors disabled:opacity-30 disabled:hover:bg-transparent" onClick={handleRedo} disabled={historyIndex >= history.length - 1} title="Redo (Ctrl+Shift+Z)">
+               <Redo2 size={16} />
+             </button>
+          </div>
 
           {/* Floating Zoom Controls */}
           <div className="absolute bottom-6 right-6 z-10 flex items-center bg-white rounded-lg shadow-lg border border-border-gray overflow-hidden">
@@ -547,6 +539,7 @@ const Editor = () => {
           fabricCanvas={fabricCanvas} 
           canvasObjects={canvasObjects} 
           setCanvasObjects={setCanvasObjects} 
+          onCrop={startCrop}
         />
       </div>
     </div>
